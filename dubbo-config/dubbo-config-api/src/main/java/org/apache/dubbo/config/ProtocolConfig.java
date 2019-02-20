@@ -185,6 +185,12 @@ public class ProtocolConfig extends AbstractConfig {
     // TODO add this to provider config
     private String optimizer;
 
+    private Boolean needClientAuth;
+
+    private String cert;
+
+    private String key;
+
     /**
      * The extension
      */
@@ -525,6 +531,30 @@ public class ProtocolConfig extends AbstractConfig {
 
     public void setExtension(String extension) {
         this.extension = extension;
+    }
+
+    public Boolean getNeedClientAuth() {
+        return needClientAuth;
+    }
+
+    public void setNeedClientAuth(Boolean needClientAuth) {
+        this.needClientAuth = needClientAuth;
+    }
+
+    public String getCert() {
+        return cert;
+    }
+
+    public void setCert(String cert) {
+        this.cert = cert;
+    }
+
+    public String getKey() {
+        return key;
+    }
+
+    public void setKey(String key) {
+        this.key = key;
     }
 
     public void destroy() {

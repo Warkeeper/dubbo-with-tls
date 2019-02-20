@@ -1114,6 +1114,21 @@
                 <xsd:documentation><![CDATA[ The protocol can be register to registry. ]]></xsd:documentation>
             </xsd:annotation>
         </xsd:attribute>
+        <xsd:attribute name="needclientauth" type="xsd:string">
+            <xsd:annotation>
+                <xsd:documentation><![CDATA[ The protocol need client auth. ]]></xsd:documentation>
+            </xsd:annotation>
+        </xsd:attribute>
+        <xsd:attribute name="cert" type="xsd:string">
+            <xsd:annotation>
+                <xsd:documentation><![CDATA[ The protocol cert. ]]></xsd:documentation>
+            </xsd:annotation>
+        </xsd:attribute>
+        <xsd:attribute name="key" type="xsd:string">
+            <xsd:annotation>
+                <xsd:documentation><![CDATA[ The protocol key. ]]></xsd:documentation>
+            </xsd:annotation>
+        </xsd:attribute>
         <xsd:attribute name="default" type="xsd:string">
             <xsd:annotation>
                 <xsd:documentation><![CDATA[ Is default. ]]></xsd:documentation>

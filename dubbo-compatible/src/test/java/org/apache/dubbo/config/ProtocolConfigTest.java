@@ -153,4 +153,25 @@ public class ProtocolConfigTest {
         protocol.setExtension("extension");
         assertThat(protocol.getExtension(), equalTo("extension"));
     }
+
+    @Test
+    public void testNeedClientAuth() throws Exception {
+        ProtocolConfig protocol = new ProtocolConfig();
+        protocol.setNeedClientAuth(true);
+        assertThat(protocol.getNeedClientAuth(), equalTo(true));
+    }
+
+    @Test
+    public void testCert() throws Exception {
+        ProtocolConfig protocol = new ProtocolConfig();
+        protocol.setCert("cert");
+        assertThat(protocol.getCert(), equalTo("cert"));
+    }
+
+    @Test
+    public void testKey() throws Exception {
+        ProtocolConfig protocol = new ProtocolConfig();
+        protocol.setKey("key");
+        assertThat(protocol.getKey(), equalTo("key"));
+    }
 }
