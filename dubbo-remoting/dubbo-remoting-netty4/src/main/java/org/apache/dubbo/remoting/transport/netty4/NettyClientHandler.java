@@ -16,6 +16,10 @@
  */
 package org.apache.dubbo.remoting.transport.netty4;
 
+import io.netty.channel.Channel;
+import io.netty.handler.ssl.SslHandler;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.Version;
 import org.apache.dubbo.common.logger.Logger;
@@ -29,6 +33,8 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.timeout.IdleStateEvent;
+
+import java.net.InetAddress;
 
 /**
  * NettyClientHandler
@@ -54,6 +60,17 @@ public class NettyClientHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        ctx.pipeline().get(SslHandler.class).handshakeFuture().addListener(
+                new GenericFutureListener<Future<Channel>>() {
+                    public void operationComplete(Future<io.netty.channel.Channel> future) throws Exception {
+                        logger.info(
+                                "Client Welcome to " + InetAddress.getLocalHost().getHostName() + " secure chat service!\n");
+                        logger.info(
+                                "Your session is protected by " +
+                                        ctx.pipeline().get(SslHandler.class).engine().getSession().getCipherSuite() +
+                                        " cipher suite.\n");
+                    }
+                });
         NettyChannel channel = NettyChannel.getOrAddChannel(ctx.channel(), url, handler);
         try {
             handler.connected(channel);

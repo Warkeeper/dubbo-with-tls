@@ -71,8 +71,24 @@
         <url>https://github.com/apache/incubator-dubbo/issues</url>
     </issueManagement>
 
+    <build>
+        <extensions>
+            <extension>
+                <groupId>kr.motd.maven</groupId>
+                <artifactId>os-maven-plugin</artifactId>
+                <version>1.4.0.Final</version>
+            </extension>
+        </extensions>
+    </build>
+
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-tcnative</artifactId>
+                <version>2.0.20.Final</version>
+                <classifier>${os.detected.classifier}</classifier>
+            </dependency>
             <dependency>
                 <groupId>org.apache.dubbo</groupId>
                 <artifactId>dubbo-cluster</artifactId>

@@ -62,6 +62,12 @@ public abstract class AbstractReferenceConfig extends AbstractInterfaceConfig {
 
     protected Boolean sticky;
 
+    protected String clientCert;
+
+    protected String secretKey;
+
+    protected String rootca;
+
     /**
      * Whether to support event in stub.
      */
@@ -77,6 +83,30 @@ public abstract class AbstractReferenceConfig extends AbstractInterfaceConfig {
      * The remote service group the customer side will reference
      */
     protected String group;
+
+    public String getClientCert() {
+        return clientCert;
+    }
+
+    public void setClientCert(String clientCert) {
+        this.clientCert = clientCert;
+    }
+
+    public String getSecretKey() {
+        return secretKey;
+    }
+
+    public void setSecretKey(String secretKey) {
+        this.secretKey = secretKey;
+    }
+
+    public String getRootca() {
+        return rootca;
+    }
+
+    public void setRootca(String rootca) {
+        this.rootca = rootca;
+    }
 
     public Boolean isCheck() {
         return check;

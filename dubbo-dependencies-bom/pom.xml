@@ -124,10 +124,28 @@
         <spring_test_version>4.3.16.RELEASE</spring_test_version>
 
         <gson_version>2.8.5</gson_version>
+
+        <tcnative_version>2.0.20.Final</tcnative_version>
     </properties>
 
+    <build>
+        <extensions>
+            <extension>
+                <groupId>kr.motd.maven</groupId>
+                <artifactId>os-maven-plugin</artifactId>
+                <version>1.4.0.Final</version>
+            </extension>
+        </extensions>
+    </build>
     <dependencyManagement>
         <dependencies>
+
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-tcnative</artifactId>
+                <version>${tcnative_version}</version>
+                <classifier>${os.detected.classifier}</classifier>
+            </dependency>
             <!-- Common libs -->
             <dependency>
                 <groupId>org.springframework</groupId>

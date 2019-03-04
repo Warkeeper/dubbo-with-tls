@@ -16,12 +16,18 @@
  */
 package org.apache.dubbo.remoting.transport.netty4;
 
+import io.netty.channel.*;
+import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslProvider;
 import org.apache.dubbo.common.Constants;
 import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.Version;
 import org.apache.dubbo.common.logger.Logger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.common.utils.NetUtils;
+import org.apache.dubbo.common.utils.StringUtils;
 import org.apache.dubbo.common.utils.UrlUtils;
 import org.apache.dubbo.remoting.ChannelHandler;
 import org.apache.dubbo.remoting.RemotingException;
@@ -29,14 +35,12 @@ import org.apache.dubbo.remoting.transport.AbstractClient;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.concurrent.DefaultThreadFactory;
+
+import java.io.File;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -47,18 +51,69 @@ public class NettyClient extends AbstractClient {
 
     private static final Logger logger = LoggerFactory.getLogger(NettyClient.class);
 
-    private static final NioEventLoopGroup nioEventLoopGroup = new NioEventLoopGroup(Constants.DEFAULT_IO_THREADS, new DefaultThreadFactory("NettyClientWorker", true));
+    private static final NioEventLoopGroup nioEventLoopGroup = new NioEventLoopGroup(Constants.DEFAULT_IO_THREADS,
+            new DefaultThreadFactory("NettyClientWorker", true));
 
     private Bootstrap bootstrap;
 
     private volatile Channel channel; // volatile, please copy reference to use
 
+    private boolean needTls = false;
+
+    private boolean clientAuth = false;
+
+    private File clientCert;
+
+    private File secretKey;
+
+    private File rootCa;
+
     public NettyClient(final URL url, final ChannelHandler handler) throws RemotingException {
         super(url, wrapChannelHandler(url, handler));
     }
 
+    private void initTls() throws RemotingException {
+        URL url = getUrl();
+        String rootCaUrl = url.getParameter(Constants.TLS_SERVER_ROOT_CA_KEY);
+        if (StringUtils.isEmpty(rootCaUrl)) {
+            logger.info("Consumer " + url.getServiceInterface() + " has no tls config while trying to open netty 4.");
+            needTls = false;
+        } else {
+            ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+            try {
+                rootCa = new File(classLoader.getResource(rootCaUrl).getFile());
+            } catch (NullPointerException npe) {
+                throw new RemotingException(url.toInetSocketAddress(), null, "Failed to connect " + getClass().getSimpleName()
+                        + " on " + getLocalAddress()
+                        + ", cause: tls context file [root ca] cannot find , please check if the file exists: "
+                        + rootCaUrl);
+            }
+            String clientCertUrl = url.getParameter(Constants.TLS_CLIENT_CERT_KEY);
+            String secretKeyUrl = url.getParameter(Constants.TLS_CLIENT_SECRET_KEY);
+
+            if (StringUtils.isEmpty(clientCertUrl) || StringUtils.isEmpty(secretKeyUrl)) {
+                logger.info("Consumer " + url.getServiceInterface()
+                        + " has no tls cert or secret key ,may be unavailable to communicate a provider which need client auth.");
+            } else {
+                try {
+                    clientCert = new File(classLoader.getResource(clientCertUrl).getFile());
+                    secretKey = new File(classLoader.getResource(secretKeyUrl).getFile());
+                } catch (NullPointerException npe) {
+                    throw new RemotingException(url.toInetSocketAddress(), null,
+                            "Failed to connect " + getClass().getSimpleName()
+                                    + " on " + getLocalAddress()
+                                    + ", cause: tls context file [cert or secret key] cannot find , please check if these files exist: "
+                                    + clientCertUrl + ", " + secretKeyUrl);
+                }
+                clientAuth = true;
+            }
+            needTls = true;
+        }
+    }
+
     @Override
     protected void doOpen() throws Throwable {
+        initTls();
         final NettyClientHandler nettyClientHandler = new NettyClientHandler(getUrl(), this);
         bootstrap = new Bootstrap();
         bootstrap.group(nioEventLoopGroup)
@@ -80,8 +135,23 @@ public class NettyClient extends AbstractClient {
             protected void initChannel(Channel ch) throws Exception {
                 int heartbeatInterval = UrlUtils.getIdleTimeout(getUrl());
                 NettyCodecAdapter adapter = new NettyCodecAdapter(getCodec(), getUrl(), NettyClient.this);
-                ch.pipeline()//.addLast("logging",new LoggingHandler(LogLevel.INFO))//for debug
-                        .addLast("decoder", adapter.getDecoder())
+                ChannelPipeline channelPipeline = ch
+                        .pipeline();//.addLast("logging",new LoggingHandler(LogLevel.INFO))//for debug
+                logger.info("needTls is " + needTls);
+                //SSL Support
+                if (needTls) {
+                    SslContextBuilder sslContextBuilder = SslContextBuilder.forClient()
+                            .sslProvider(SslProvider.OPENSSL)
+                            .protocols("TLSv1.2")
+                            .trustManager(rootCa);
+                    if (clientAuth) {
+                        sslContextBuilder.keyManager(clientCert, secretKey);
+                    }
+                    SslContext sslContext = sslContextBuilder.build();
+                    channelPipeline.addFirst(sslContext.newHandler(ch.alloc()));
+                    logger.info("tls context built~~");
+                }
+                channelPipeline.addLast("decoder", adapter.getDecoder())
                         .addLast("encoder", adapter.getEncoder())
                         .addLast("client-idle-handler", new IdleStateHandler(heartbeatInterval, 0, 0, MILLISECONDS))
                         .addLast("handler", nettyClientHandler);
@@ -104,7 +174,8 @@ public class NettyClient extends AbstractClient {
                     if (oldChannel != null) {
                         try {
                             if (logger.isInfoEnabled()) {
-                                logger.info("Close old netty channel " + oldChannel + " on create new netty channel " + newChannel);
+                                logger.info(
+                                        "Close old netty channel " + oldChannel + " on create new netty channel " + newChannel);
                             }
                             oldChannel.close();
                         } finally {
@@ -132,7 +203,8 @@ public class NettyClient extends AbstractClient {
             } else {
                 throw new RemotingException(this, "client(url: " + getUrl() + ") failed to connect to server "
                         + getRemoteAddress() + " client-side timeout "
-                        + getConnectTimeout() + "ms (elapsed: " + (System.currentTimeMillis() - start) + "ms) from netty client "
+                        + getConnectTimeout() + "ms (elapsed: " + (System.currentTimeMillis() - start)
+                        + "ms) from netty client "
                         + NetUtils.getLocalHost() + " using dubbo version " + Version.getVersion());
             }
         } finally {

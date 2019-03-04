@@ -187,10 +187,11 @@ public class ProtocolConfig extends AbstractConfig {
 
     private Boolean needClientAuth;
 
-    private String cert;
+    private String serverCert;
 
-    private String key;
+    private String secretKey;
 
+    private String rootca;
     /**
      * The extension
      */
@@ -533,6 +534,7 @@ public class ProtocolConfig extends AbstractConfig {
         this.extension = extension;
     }
 
+    @Parameter(append = true)
     public Boolean getNeedClientAuth() {
         return needClientAuth;
     }
@@ -541,20 +543,28 @@ public class ProtocolConfig extends AbstractConfig {
         this.needClientAuth = needClientAuth;
     }
 
-    public String getCert() {
-        return cert;
+    public String getServerCert() {
+        return serverCert;
     }
 
-    public void setCert(String cert) {
-        this.cert = cert;
+    public void setServerCert(String serverCert) {
+        this.serverCert = serverCert;
     }
 
-    public String getKey() {
-        return key;
+    public String getSecretKey() {
+        return secretKey;
     }
 
-    public void setKey(String key) {
-        this.key = key;
+    public void setSecretKey(String secretKey) {
+        this.secretKey = secretKey;
+    }
+
+    public String getRootca() {
+        return rootca;
+    }
+
+    public void setRootca(String rootca) {
+        this.rootca = rootca;
     }
 
     public void destroy() {

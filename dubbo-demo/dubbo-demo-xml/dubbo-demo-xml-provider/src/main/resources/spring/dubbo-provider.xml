@@ -24,10 +24,11 @@
     <!-- provider's application name, used for tracing dependency relationship -->
     <dubbo:application name="demo-provider"/>
 
-    <dubbo:registry address="multicast://224.5.6.7:1234" />
+    <dubbo:registry address="zookeeper://localhost:2181"/>
 
     <!-- use dubbo protocol to export service on port 20880 -->
-    <dubbo:protocol name="dubbo"/>
+    <dubbo:protocol name="dubbo" needclientauth="false" secretkey="server1-key.pem" servercert="server1-crt.pem"
+                    rootca="server-root-ca.crt"/>
 
     <!-- service implementation, as same as regular local bean -->
     <bean id="demoService" class="org.apache.dubbo.demo.provider.DemoServiceImpl"/>

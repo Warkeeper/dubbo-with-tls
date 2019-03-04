@@ -16,12 +16,19 @@
  */
 package org.apache.dubbo.remoting.transport.netty4;
 
+import io.netty.channel.*;
+import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslProvider;
+import io.netty.internal.tcnative.SSL;
 import org.apache.dubbo.common.Constants;
 import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.logger.Logger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.common.utils.ExecutorUtil;
 import org.apache.dubbo.common.utils.NetUtils;
+import org.apache.dubbo.common.utils.StringUtils;
 import org.apache.dubbo.common.utils.UrlUtils;
 import org.apache.dubbo.remoting.Channel;
 import org.apache.dubbo.remoting.ChannelHandler;
@@ -32,16 +39,13 @@ import org.apache.dubbo.remoting.transport.dispatcher.ChannelHandlers;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.concurrent.DefaultThreadFactory;
 
+import java.io.File;
 import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.HashSet;
@@ -56,6 +60,16 @@ public class NettyServer extends AbstractServer implements Server {
 
     private static final Logger logger = LoggerFactory.getLogger(NettyServer.class);
 
+    private File serverCert;
+
+    private File secretKey;
+
+    private File rootCa;
+
+    private boolean needClientAuth;
+
+    private boolean needTls = false;
+
     private Map<String, Channel> channels; // <ip:port, channel>
 
     private ServerBootstrap bootstrap;
@@ -67,14 +81,55 @@ public class NettyServer extends AbstractServer implements Server {
 
     public NettyServer(URL url, ChannelHandler handler) throws RemotingException {
         super(url, ChannelHandlers.wrap(handler, ExecutorUtil.setThreadName(url, SERVER_THREAD_POOL_NAME)));
+        String serverCertUrl = getUrl().getParameter(Constants.TLS_SERVER_CERT_KEY);
+        String secretKeyUrl = getUrl().getParameter(Constants.TLS_SERVER_SECRET_KEY);
+        if (StringUtils.isEmpty(serverCertUrl) || StringUtils.isEmpty(secretKeyUrl)) {
+            logger.info("Provider " + url.getServiceInterface() + " has no tls config while trying to open netty 4.");
+            needTls = false;
+        } else {
+            String needClientAuthUrl = getUrl().getParameter(Constants.TLS_NEED_CLIENT_AUTH_KEY);
+            if (StringUtils.isNotEmpty(needClientAuthUrl)) {
+                needClientAuth = Boolean.valueOf(needClientAuthUrl);
+                ;
+            } else {
+                needClientAuth = false;
+            }
+            String rootCaUrl = null;
+            if (needClientAuth) {
+                rootCaUrl = getUrl().getParameter(Constants.TLS_SERVER_ROOT_CA_KEY);
+                if (StringUtils.isEmpty(rootCaUrl)) {
+                    throw new RemotingException(url.toInetSocketAddress(), null, "Failed to bind " + getClass().getSimpleName()
+                            + " on " + getLocalAddress() + ", cause: needClientAuth is true but root ca is not configured");
+                }
+            }
+            try {
+                ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+                //                logger.info("*******  "+classLoader.getResource("").toString());
+                serverCert = new File(classLoader.getResource(serverCertUrl).getFile());
+                secretKey = new File(classLoader.getResource(secretKeyUrl).getFile());
+                if (needClientAuth) {
+                    rootCa = new File(classLoader.getResource(rootCaUrl).getFile());
+                }
+            } catch (NullPointerException npe) {
+                throw new RemotingException(url.toInetSocketAddress(), null, "Failed to bind " + getClass().getSimpleName()
+                        + " on " + getLocalAddress()
+                        + ", cause: tls context file cannot find , please check if these files exist: "
+                        + serverCertUrl + ", " + secretKeyUrl + ", " + rootCaUrl);
+            }
+            needTls = true;
+        }
     }
 
     @Override
     protected void doOpen() throws Throwable {
+
+        logger.info("Bind server with url: " + getUrl());
+
         bootstrap = new ServerBootstrap();
 
         bossGroup = new NioEventLoopGroup(1, new DefaultThreadFactory("NettyServerBoss", true));
-        workerGroup = new NioEventLoopGroup(getUrl().getPositiveParameter(Constants.IO_THREADS_KEY, Constants.DEFAULT_IO_THREADS),
+        workerGroup = new NioEventLoopGroup(
+                getUrl().getPositiveParameter(Constants.IO_THREADS_KEY, Constants.DEFAULT_IO_THREADS),
                 new DefaultThreadFactory("NettyServerWorker", true));
 
         final NettyServerHandler nettyServerHandler = new NettyServerHandler(getUrl(), this);
@@ -91,11 +146,26 @@ public class NettyServer extends AbstractServer implements Server {
                         // FIXME: should we use getTimeout()?
                         int idleTimeout = UrlUtils.getIdleTimeout(getUrl());
                         NettyCodecAdapter adapter = new NettyCodecAdapter(getCodec(), getUrl(), NettyServer.this);
-                        ch.pipeline()//.addLast("logging",new LoggingHandler(LogLevel.INFO))//for debug
-                                .addLast("decoder", adapter.getDecoder())
+
+                        ChannelPipeline channelPipeline = ch
+                                .pipeline();//.addLast("logging",new LoggingHandler(LogLevel.INFO))//for debug
+
+                        //SSL Support
+                        if (needTls) {
+                            SslContextBuilder sslContextBuilder = SslContextBuilder.forServer(serverCert, secretKey)
+                                    .sslProvider(SslProvider.OPENSSL)
+                                    .protocols("TLSv1.2");
+                            if (needClientAuth) {
+                                sslContextBuilder.clientAuth(ClientAuth.REQUIRE).trustManager(rootCa);
+                            }
+                            SslContext sslContext = sslContextBuilder.build();
+                            channelPipeline.addLast(sslContext.newHandler(ch.alloc()));
+                        }
+                        channelPipeline.addLast("decoder", adapter.getDecoder())
                                 .addLast("encoder", adapter.getEncoder())
                                 .addLast("server-idle-handler", new IdleStateHandler(0, 0, idleTimeout, MILLISECONDS))
                                 .addLast("handler", nettyServerHandler);
+
                     }
                 });
         // bind

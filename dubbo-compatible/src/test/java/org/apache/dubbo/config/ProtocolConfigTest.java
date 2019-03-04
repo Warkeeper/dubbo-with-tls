@@ -164,14 +164,14 @@ public class ProtocolConfigTest {
     @Test
     public void testCert() throws Exception {
         ProtocolConfig protocol = new ProtocolConfig();
-        protocol.setCert("cert");
-        assertThat(protocol.getCert(), equalTo("cert"));
+        protocol.setServerCert("cert");
+        assertThat(protocol.getServerCert(), equalTo("cert"));
     }
 
     @Test
     public void testKey() throws Exception {
         ProtocolConfig protocol = new ProtocolConfig();
-        protocol.setKey("key");
-        assertThat(protocol.getKey(), equalTo("key"));
+        protocol.setSecretKey("key");
+        assertThat(protocol.getSecretKey(), equalTo("key"));
     }
 }

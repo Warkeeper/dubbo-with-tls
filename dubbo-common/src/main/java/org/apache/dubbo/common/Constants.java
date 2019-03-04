@@ -779,10 +779,13 @@ public class Constants {
 
     public static final String REGISTRIES_SUFFIX = "dubbo.registries.";
 
-    public static final String[] DEFAULT_REGISTER_PROVIDER_KEYS = {APPLICATION_KEY, CODEC_KEY, EXCHANGER_KEY, SERIALIZATION_KEY, CLUSTER_KEY, CONNECTIONS_KEY, DEPRECATED_KEY,
-            GROUP_KEY, LOADBALANCE_KEY, MOCK_KEY, PATH_KEY, TIMEOUT_KEY, TOKEN_KEY, VERSION_KEY, WARMUP_KEY, WEIGHT_KEY, TIMESTAMP_KEY, DUBBO_VERSION_KEY, RELEASE_KEY};
+    public static final String[] DEFAULT_REGISTER_PROVIDER_KEYS = { APPLICATION_KEY, CODEC_KEY, EXCHANGER_KEY,
+            SERIALIZATION_KEY, CLUSTER_KEY, CONNECTIONS_KEY, DEPRECATED_KEY,
+            GROUP_KEY, LOADBALANCE_KEY, MOCK_KEY, PATH_KEY, TIMEOUT_KEY, TOKEN_KEY, VERSION_KEY, WARMUP_KEY, WEIGHT_KEY,
+            TIMESTAMP_KEY, DUBBO_VERSION_KEY, RELEASE_KEY };
 
-    public static final String[] DEFAULT_REGISTER_CONSUMER_KEYS = {APPLICATION_KEY, VERSION_KEY, GROUP_KEY, DUBBO_VERSION_KEY, RELEASE_KEY};
+    public static final String[] DEFAULT_REGISTER_CONSUMER_KEYS = { APPLICATION_KEY, VERSION_KEY, GROUP_KEY, DUBBO_VERSION_KEY,
+            RELEASE_KEY };
 
     public static final String TELNET = "telnet";
 
@@ -829,4 +832,17 @@ public class Constants {
      * private Constants(){ }
      */
 
+    public static final String TLS_NEED_CLIENT_AUTH_KEY = "needclientauth";
+
+    public static final String TLS_SERVER_ROOT_CA_KEY = "rootca";
+
+    public static final String TLS_SERVER_CERT_KEY = "servercert";
+
+    public static final String TLS_SERVER_SECRET_KEY = "secretkey";
+
+    public static final String TLS_CLIENT_ROOT_CA_KEY = "rootca";
+
+    public static final String TLS_CLIENT_CERT_KEY = "clientcert";
+
+    public static final String TLS_CLIENT_SECRET_KEY = "secretkey";
 }

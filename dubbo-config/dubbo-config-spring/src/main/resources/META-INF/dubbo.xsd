@@ -226,6 +226,21 @@
                         <xsd:documentation><![CDATA[ lazy create connection. ]]></xsd:documentation>
                     </xsd:annotation>
                 </xsd:attribute>
+                <xsd:attribute name="clientcert" type="xsd:string">
+                    <xsd:annotation>
+                        <xsd:documentation><![CDATA[ lazy create connection. ]]></xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
+                <xsd:attribute name="rootca" type="xsd:string">
+                    <xsd:annotation>
+                        <xsd:documentation><![CDATA[ lazy create connection. ]]></xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
+                <xsd:attribute name="secretkey" type="xsd:string">
+                    <xsd:annotation>
+                        <xsd:documentation><![CDATA[ lazy create connection. ]]></xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
             </xsd:extension>
         </xsd:complexContent>
     </xsd:complexType>
@@ -1119,14 +1134,19 @@
                 <xsd:documentation><![CDATA[ The protocol need client auth. ]]></xsd:documentation>
             </xsd:annotation>
         </xsd:attribute>
-        <xsd:attribute name="cert" type="xsd:string">
+        <xsd:attribute name="servercert" type="xsd:string">
             <xsd:annotation>
-                <xsd:documentation><![CDATA[ The protocol cert. ]]></xsd:documentation>
+                <xsd:documentation><![CDATA[ The protocol server cert. ]]></xsd:documentation>
             </xsd:annotation>
         </xsd:attribute>
-        <xsd:attribute name="key" type="xsd:string">
+        <xsd:attribute name="secretkey" type="xsd:string">
             <xsd:annotation>
-                <xsd:documentation><![CDATA[ The protocol key. ]]></xsd:documentation>
+                <xsd:documentation><![CDATA[ The protocol secret key. ]]></xsd:documentation>
+            </xsd:annotation>
+        </xsd:attribute>
+        <xsd:attribute name="rootca" type="xsd:string">
+            <xsd:annotation>
+                <xsd:documentation><![CDATA[ The protocol root ca. ]]></xsd:documentation>
             </xsd:annotation>
         </xsd:attribute>
         <xsd:attribute name="default" type="xsd:string">
